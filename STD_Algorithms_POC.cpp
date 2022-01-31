@@ -31,9 +31,10 @@
 //		2. a value containing the result of some operation on the elements
 // 
 // ------------------------------------------------------------------------------
+//
 // 
+//  
 // Landa Expressions: What if we could actually write the code inside the algorithm call
-
 // 
 // When we call an algorithm function, we have been using functors or function pointers,
 // we pass an object of a functorial class or a function object, in order to customize
@@ -87,8 +88,10 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include<thread>
+#include<chrono>
 
-
+int global{ 99 };													//non-local variable
 void findstring()
 {
 	//1. 
@@ -526,7 +529,211 @@ void find_index_example()
 
 	//the functor hasa copy of the captured variable, so when it's being modified, it was changing the copied variable.
 }
-int global{ 99 };													//non-local variable
+
+
+// Captureby reference:
+// 
+//		There is a way to CHANGE a captured variable...
+// before this point we saw that a labda can capture a local variable by value, which gives it a copy of the variable which is const uless mutable
+// 
+// However, To change a captured variable, we need to capture it by reference,
+// to do this, we put & before the captured variable
+// 
+// int n{2};
+// [&n](int arg) {return (n * arg);}		the n inside the body is going to be a reference to the local variable, so if lambda changes the variable, it will also effect the variable in local scope
+//
+
+
+void find_index_example_with_referenced_lambda_variable()
+{
+	// we were trying to find a word with more than 5 chars and it's index.
+	// but we had a problem because we could only modify a copy of index variable...
+	std::vector<std::string>words{ "a","of","words","With","collection", "Varying","lengths" };
+
+	std::cout << "Vector before sort(): ";
+
+	for (auto name : words)
+		std::cout << "\"" << name << "\", ";
+	std::cout << std::endl << std::endl;
+
+	int n{ 5 }, idx{ -1 };	
+	// if we now capture by reference [&idx], it's going to be a reference in lambda body
+	// so when we increment in the body, it will also incremebt the local variable through reference
+	// and when the find_if call returns, it should have the corect value
+	//
+	auto res = std::find_if(std::cbegin(words), std::cend(words),
+		[n, &idx](const std::string& str) mutable {++idx; return str.size() > n; });
+
+	if (res != std::cend(words)) {
+		std::cout << R"(The first word which is more than )" << n << R"( letters long is ")";			//https://docs.microsoft.com/en-us/cpp/cpp/string-and-character-literals-cpp?view=msvc-170
+		std::cout << *res << R"(")" << std::endl;
+		std::cout << "the index in the vector is : " << idx << std::endl;						
+	}
+
+	//the functor hasa copy of the captured variable, so when it's being modified, it was changing the copied variable.
+}
+
+// IMPLEMENTATION: 
+// lambda w/ capture by reference is also implemented as "functor with state", similar to capture by value, so compiler will
+// generate def of class with function call operator and private data member to store the captured value
+// but the member variable is a REFERENCE to the captured variable this time
+// the captured variable will be passed to the functor constructor by reference 
+//		-it's function call operator can modify captured variable through the reference
+
+
+
+
+// IMPLICIT CAPTURE
+// we can make a lambda capture ALL variables in scope
+// 
+// [=] will capture all variables by value
+// [&] will capture all variables by reference
+// 
+// NOTE:
+//		Capturing all variables by reference can make thecode difficult to maintain
+//			-lambda could modify any variable in scope
+//		Usually it's safer to capture by reference ONLY those variables it needs to modify
+// 
+// HERE'S HOW:
+// [=, &x]		this will capture x by reference, and all other variables by value
+// 
+// [&,=a, =b]	this will capture a and b by value, and all others variables by reference
+// 
+// 
+// LAMBDA FUNCTIONS AND MEMBER FUNCTIONS:
+// 
+// A Member function called with an extra argument which is a pointer to the class instance it is being called on
+//		test.do_it();
+//		// called as Test::do_it&test)
+//		// &test is available in the member function body as "this"
+// 
+// In effect, "this" is a variable in the scope of the member function.... meaning we can capture it!!!!!!
+// 
+// WHEN WE HAVE A LAMBDA [] EXPRESSION INSIDE A MEMBER FUNCTION, IT IS ALLOWED TO CAPTURE "this"
+// 
+// This allows the lambda to access data members and call other member functions of the class, including private ones, and others
+// 
+// CAPTURING "this"
+// 
+//		- to capture the class object we put [this], [&] or [=]... [&this] and [=this] are not allowed
+//		- These all capture the object by reference
+// 
+
+class Test {
+public:
+	int time{ 10 };									// data member
+	void countdown() {								// member function which calls a lambda expression
+		[this]() {									// capture class object by reference... unless you write [*this]() mutable
+			if (time > 0)
+				std::cout << time << std::endl;
+			else if (time == 0)
+				std::cout << "Liftoff" << std::endl;
+			--time;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}();										// call Lambda expression, makes the compiler create object of class and call function operator
+	}
+};
+
+
+
+// 
+// in c++ 17 we also have [*this], this will capture the object by value
+// if we implement this in the class above it will give an error about
+// needing a modifiable value unless we add mutable after the lambda
+// and round brackets and before the curly braces
+// 
+// When we call the member function under that circumstance, the 
+// member function has a copy of the object and it modifies the copy but not the actual object
+// 
+// 
+
+// ------------------------------------------------------------------------------//
+// LAMBDA EXPRESSIONS AND PARTIAL EVALUATION
+// 
+// Storing lambdas
+//		the main use for lambdas is for writing in place local functions in things like algo calls
+//		However they are considered "first class objects", it's an object of the functor class that cimpiler generates
+//		We can store them in variables and pass them to a function
+// 
+//			//store lambda function in a variable
+//			auto is_longer_than = [max](const& string str) {return str.size() > max; }
+// 
+//			//pass this variable as the predicate
+//			auto res = find_if(cbegin(words), cend(words),is_longer_than);
+// 
+//		We must use auto here, as it is impossible to know the type of the compiler generated functor
+//
+
+// 
+//
+void Storing_Lambdas() {
+	std::vector<std::string>words{ "a","of","words","With","collection", "Varying","lengths" };
+
+	std::cout << "Vector words: ";
+
+	for (auto name : words)
+		std::cout << "\"" << name << "\", ";
+	std::cout << std::endl << std::endl;
+	int max{ 5 };
+
+	//Below is the previous code but with lambda expressions split out
+
+
+	//Save the lambda expression in a variable
+	auto is_longer_than = [max](const std::string str) {return str.size() > max; };
+
+	//Pass the variable as the predicate
+	auto res = std::find_if(std::cbegin(words), std::cend(words), is_longer_than);
+
+	//Display it!
+	if (res != std::cend(words)) {
+		std::cout << R"(The first word which is more than )" << max << R"( letters long is ")";			//https://docs.microsoft.com/en-us/cpp/cpp/string-and-character-literals-cpp?view=msvc-170
+		std::cout << *res << R"(")" << std::endl;
+
+	}
+
+}
+
+
+// RETURNING A LAMNDA FROM A FUNCTION CALL:
+// 
+// We can also return a lambda expression from a function
+// 
+// //Function which returns a Lambda function
+//		auto greeter(const string& salutation){
+//			return [salutation] (const string& name){return salutation + ","s + name; }
+// 
+// Calling this function will return a lambda which captures "salutation"
+// //store the lambda function in a variable
+//		auto greet = greeter("Hello"s);
+// 
+// greet is a Lambda which takes a name as an argument and adds the salutation to it
+//
+
+//This is the function which returns a lambda function
+auto greeter(const std::string& salutation) { 
+	return [salutation](const std::string& name) {return salutation + ", " + name; }; 
+}
+
+
+// PARTIAL EVALUATION:
+//		in partial evaluation, data is processed in stages
+//			-ex: formatting pages in a document viewer
+//			-reduces computation
+//			-can make processing simpler
+//			-many applications in AI, DB queries, scientific computing etc.
+//		
+//		We can use lambda expressions with capture to implement partial evaluation
+// 
+//	auto greeter() performs a partial evaluation
+//		- it processes the salutation part of the greeting but not the name
+//		- code which issues a greeting only has to provide the name
+//		- it does not need to process the salutation or know how it is processed
+//		- the salutation processing is written ONCE, instead of every time someone is greeted
+// 
+//	If you want a different greeting, you call greeter() with a different argument
+// 
+//
 
 int main()
 {
@@ -545,23 +752,49 @@ int main()
 	//-------------------------------------------------------//
 
 																	// int main(){} == scope containing lambda expression
-	static int answer{ 42 };												// static variable in containing scope
-	const int one{ 1 };												// Local Variable in containing scope
-	const int& r_one{ one };										// Local variable in containing scope
+	//static int answer{ 42 };												// static variable in containing scope
+	//const int one{ 1 };												// Local Variable in containing scope
+	//const int& r_one{ one };										// Local variable in containing scope
 
-	[]() {															//start of lambda expression
-		std::cout << global << std::endl;							//Lambda can access NON-Local Variables
-		std::cout << answer << std::endl;							//lambda can access static variables
-		//does not compile in 14 or 17, 
-		//std::cout << one << std::endl;
-		//std::cout << r_one << std::endl;							//an enclosing - function local variable cannot be referenced in a lambda body unless it is in the capture list
-		
-		
-	
-	};
+	//[]() {															//start of lambda expression
+	//	std::cout << global << std::endl;							//Lambda can access NON-Local Variables
+	//	std::cout << answer << std::endl;							//lambda can access static variables
+	//	//does not compile in 14 or 17, 
+	//	//std::cout << one << std::endl;
+	//	//std::cout << r_one << std::endl;							//an enclosing - function local variable cannot be referenced in a lambda body unless it is in the capture list
+	//	
+	//	
+	//
+	//};
 
 	//Capture_example();
-	find_index_example();
-	std::cin.get();													
+	//find_index_example();
+
+	//-----------------------------------------------------------//
+														
+	//find_index_example_with_referenced_lambda_variable();
+
+	//-----------------------------------------------------------//
+
+	// We've got two classes, the one we defined below and the functor which the compiler will define
+	//Test test;
+	//for (int i = 0; i < 12; i++)
+	//	test.countdown();
+	
+
+	//-----------------------------------------------------------//
+	//Storing_Lambdas();
+	
+	//store lambda function in a variable
+	auto greet = greeter("Welcome");
+
+	//call the Lambda function
+	std::cout << "Greeting: " << greet("students") << std::endl;
+	std::cout << "Greeting: " << greet("James") << std::endl;
+	//-----------------------------------------------------------//
+
+
+
+	std::cin.get();
 
 }
