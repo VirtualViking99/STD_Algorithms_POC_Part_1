@@ -79,15 +79,16 @@
 //		- in cpp 17, this is no longer required, so you can have one brach which returns in and one which returns string and 
 //		the compiler will deduce the return type
 // 
-
-
-
 #pragma warning(disable: 4018)
 
 #include <iostream>
 #include <string>
+#include<functional>
+#include<numeric>
 #include <algorithm>
 #include <vector>
+#include <deque>
+#include<array>
 #include<thread>
 #include<chrono>
 
@@ -635,6 +636,7 @@ public:
 };
 
 
+//------------------------------------------------------------------------------------------------------//
 
 // 
 // in c++ 17 we also have [*this], this will capture the object by value
@@ -694,6 +696,7 @@ void Storing_Lambdas() {
 
 }
 
+//------------------------------------------------------------------------------------------------------//
 
 // RETURNING A LAMNDA FROM A FUNCTION CALL:
 // 
@@ -714,6 +717,7 @@ void Storing_Lambdas() {
 auto greeter(const std::string& salutation) { 
 	return [salutation](const std::string& name) {return salutation + ", " + name; }; 
 }
+//------------------------------------------------------------------------------------------------------//
 
 
 // PARTIAL EVALUATION:
@@ -734,6 +738,322 @@ auto greeter(const std::string& salutation) {
 //	If you want a different greeting, you call greeter() with a different argument
 // 
 //
+//------------------------------------------------------------------------------------------------------//
+
+// LAMBDA'S IN C++14
+// 
+// in c++ 14 the compiler can deduce the return type of a lambda function
+// in effect, the return type is usually auto implicitly
+// 
+// We can also use "auto" for the type of arguments to the lambda expression
+// 
+// these are known as "generic lambdas" or "polymorphic lambdas 
+// this was the most requested feature for c++ 14
+// 
+// the compiler will deduce the argument types from the way the lambda expression is called
+// 
+// it will use the same rules as for a template
+// 
+// 
+// ------------------------------------------------------------------------------------------------------//
+// 
+// Pair Types:
+// 
+// std::pair defined in <utility>
+// 2 public data members
+//		-can be of different types
+//		-accessed as "first" and "second"
+// 
+// std::pair can be used to return two related data items from a function
+// std::pair isused by some of the containers in STL
+// 
+// std::pair is a Templated type
+// 
+// when we call the pair constructor we need to specify the types of both members
+// 
+//  pair<string,string> wordpair{"hello"s,"there"s};
+//	wordpair.first;
+//  wordpair.second;
+// 
+// We can call make_pair() to create a pair VARIABLE
+// 
+//		auto wordpair {make_pair("hello"s,"there"s)};
+// 
+// i c++17 the compiler can deduce the types 
+//		pair wordpair{"hello"s,"there"s};
+//
+
+
+void Pairs_example() {
+	std::pair<std::string, std::string> wordpair{ "hello","there" };							//General implementation
+	std::cout << "\nExample 1:\nstd::pair<std::string, std::string> wordpair{ \"hello\",\"there\" };\n";
+	std::cout << "the first  element of the first pair is: " << wordpair.first << std::endl;
+	std::cout << "the second element of the first pair is: " << wordpair.second << std::endl;
+
+	auto wordpair2{ std::make_pair("What's","up") };											//call to std::make_pair()
+	std::cout << "\nExample 2:\nauto wordpair{ std::make_pair(\"What's\",\"up\") };\n";
+	std::cout << "the first  element of the second pair is: " << wordpair2.first << std::endl;
+	std::cout << "the second element of the second pair is: " << wordpair2.second << std::endl;
+
+	std::pair wordpair3{ "not","much" };														//c++ 17 CTAD
+	std::cout << "\nExample 3:\nstd::pair wordpair3{ \"not\",\"much\" };\n";
+	std::cout << "the first  element of the second pair is: " << wordpair3.first << std::endl;
+	std::cout << "the second element of the second pair is: " << wordpair3.second << std::endl;
+}
+
+
+//Insert Iterators
+// 
+// An output stream iterator inserts data into an output stream
+// an insert iterator adds new elements to a container
+// to add a new element, we asign to the insert iterator
+// 
+// There are three types of iterator which add an element at different positions
+//			std::back_insert_iterator adds an element at the back
+//			std::front_insert_iterator adds an element at the front
+//			std::insert_iterator adds an element at any given position
+// 
+// To get an intert_iterator, we call an "inserter" function
+// 
+// we pass the container object as the argument to theinserter
+// 
+// the function returns an insert iterator for that object
+// 
+// back_inserter()
+// front_inserter()
+// inserter()
+// 
+
+void back_insert_iterator_Example()
+{
+	// std::back_insert_iterator:
+//		to add a new element to the back, we assign a value to this
+//		the push_back() member function of the container will be called
+//		the value we assign will be passed as the argument to push_back()
+//		every time we asign to this iterator, a new element is added at the back of the container
+// 
+
+
+	std::vector<int> vec;																//empty vector container
+	
+	std::cout << "\n\nour first vector 'vec' has " << vec.size() << " elements in it\n"
+		"NOW we will call back_inserter, which will be in the First-in order...\n"
+		"*it = 99;\n"
+		"*it = 88;\n\n";
+	
+	auto it = std::back_inserter(vec);													//get an insert iterator for the vector
+
+	//Assign to this iterator
+	std::cout << "Assigning to insert iterator\n";
+	*it = 99;																			//calls vec.pushback(99)
+	*it = 88;																			//calls vec.pushback(88)
+
+	//Vector elements are now {99, 88}
+	std::cout << "Vector NOW has " << vec.size() << " elements in it\n";
+
+	for (auto v : vec)
+		std::cout << v << ", ";
+	std::cout << std::endl;
+
+}
+void front_insert_iterator_Example()
+{
+
+	// this does not work with std::vector or std::string
+	// we will use deque
+
+	std::deque<int> deq;
+
+	std::cout << "\n\nour deque 'deq' has " << deq.size() << " elements in it\n"
+		"THIS TIME we will call front_inserter, BUT we will add the elements in what will be REVERSE order\n"
+		"*it = 30;\n"
+		"*it = 44; \n\n";
+
+	auto it = std::front_inserter(deq);
+	std::cout << "Assigning to insert iterator\n";
+	*it = 30;
+	*it = 44;
+
+	//Vector elements are now {99, 88}
+	std::cout << "Deque NOW has " << deq.size() << " elements in it\n";
+
+	for (auto d : deq)
+		std::cout << d << ", ";
+	std::cout << std::endl;
+}
+
+
+
+void insert_iterator_Example()
+{
+	/*
+	- inserter() neither frontnor back, takes a second argument, which is a positional
+	iterator
+
+	- this iterator represents the position in which the elements will be added
+	*/
+
+	std::vector<int> vec = { 1,2,3,4,5,6 };
+
+	std::cout << "\n\nin this example we have the folowing vector: \n";
+	for (auto v : vec)
+		std::cout << v << ", ";
+	std::cout << std::endl;
+	std::cout << "\n\nNext we get a positional iterator to the second element\n"
+		"auto el2 = next(begin(vec));\n";
+
+	auto el2 = std::next(std::begin(vec));
+
+	std::cout << "\n\nThe return value is an insert_iterator for the container at that position.\n"
+		"auto it = std::inserter(vec, el2);\n";
+	auto it = std::inserter(vec, el2);
+
+	std::cout << "To add to this position, we assign to the insert_iterator\n"
+		"The number I'm going to insert is going to be...1000.\n"
+		"*it = 1000\n";
+
+	*it = 1000;
+	std::cout << "\nNow let's see what our vector looks like\n";
+	for (auto v : vec)
+		std::cout << v << ", ";
+
+
+	std::cout << "\nNow if I take another number, like 200,000, the vector is going to looklike this...\n";
+	*it = 200000;
+	for (auto v : vec)
+		std::cout << v << ", ";
+	std::cout << std::endl;
+
+
+}
+
+
+// 
+// LIbrary Function objects
+// 
+// the C++ library provides some function objects
+// 
+// these are generic operators for arithmetic, logical and relational operations
+// 
+// they are implemented as templated functors, so they are classes which have a function call operator, they'll work for any type which 
+// supports the underlying operator
+// 
+// they just call the coresponding operator for the object
+// 
+// 
+//
+
+void less_library_implementation()
+{
+	std::vector<std::string> names = { "William", "Benjamin", "Nick", "Stan", "Finguy", "Vassili", "Priscilla" };
+
+	std::wcout << "\n\n";
+
+	std::cout << "Vector before sort(): ";
+
+	for (auto name : names)
+		std::cout << name << ", ";
+	std::cout << std::endl << std::endl;
+
+	std::sort(std::begin(names), std::end(names), std::greater<std::string>());		//greater will sort in reverse alphabetical order
+
+	std::cout << "Vector after sort() call...\n";
+
+	for (auto name : names)
+		std::cout << name << ", ";
+	std::cout << std::endl << std::endl;
+}
+
+void Arithmetical_library_operators()
+{
+	std::string a{ "Hello " };
+	const char* b{ "World" };
+
+	std::string res = std::plus<>{}(a, b);
+
+	std::cout << "std::string a{ \"Hello \" };\n"
+		"const char* b{ \"World\" };\n"
+		"std::string res = std::plus<>{}(a, b);\n"
+		"result of adding a + b=  " << res << "\n";
+
+
+	//std::minus requires #include<numeric>, and is an argument call for an accumulator
+	int arr[] = { 50,30 };
+	int diff1 = std::accumulate(arr, arr + 2, 100, std::minus<int>());
+	std::cout << "\nint arr[] = { 50,30 };\n"
+		"int diff1 = std::accumulate(arr,arr+2, 100, std::minus<int>());\n"
+		"The end result of 100-50-30 = " << diff1 << "\n";
+
+
+	int diff2 = std::accumulate(arr, arr + 1, 100, std::minus<int>());
+	std::cout << "\nint arr[] = { 50,30 };\n"
+		"int diff2 = std::accumulate(arr, arr + 1, 100, std::minus<int>());\n"
+		"The end result of 100-50-0 = " << diff2 << "\n";
+
+
+	std::cout << "\nmore can be found at https://en.cppreference.com/w/cpp/utility/functional" << "\n";
+}
+
+void Relational_library_operators()
+{
+
+}
+
+
+int getIndex(std::vector<int> v, int K)
+{
+	auto it = find(v.begin(), v.end(), K);
+
+	// If element was found
+	if (it != v.end())
+	{
+
+		// calculating the index
+		// of K
+		int index = it - v.begin();
+		//std::cout << index << std::endl;
+	}
+	else {
+		// If the element is not
+		// present in the vector
+		//std::cout << "-1" << std::endl;
+	}
+	return K;
+}
+
+void Logical_operators()
+{
+	bool first[] = { true, false, true, false };
+	bool second[] = { true, true, false,false };
+
+	bool result[4];
+
+	std::transform(first, first + 4, second, result, std::logical_and<bool>());
+
+	std::cout<<
+		"\nbool first[] = { true, false, true, false };\n"
+		"bool second[] = { true, true, false,false };\n"
+		"bool result[4];\n"
+		"std::transform(first, first + 4, second, result, std::logical_and<bool>());\n"
+		"\nThis entire operation takes the boolean values in the two arrays\n"
+		"and does a logical comparison between them.  The result becomes...\n\n";
+
+	std::cout << "for (int i = 0; i < 4; i++)\n"
+		"	std::cout << first[i] << \"AND \" << second[i] << \" = \" << result[i] << \"\n\";\n\n";
+
+	for (int i = 0; i < 4; i++)
+		std::cout << first[i] << " AND " << second[i] << " = " << result[i] << "\n";
+
+
+	bool third[] = { false, false, true, false, true, false, false, true, true };
+	bool fourth[] = { true, false, false, false, true, true, false, false, true };
+}
+
+
+void bitwise_operators()
+{
+
+}
 
 int main()
 {
@@ -784,17 +1104,37 @@ int main()
 
 	//-----------------------------------------------------------//
 	//Storing_Lambdas();
-	
-	//store lambda function in a variable
-	auto greet = greeter("Welcome");
-
-	//call the Lambda function
-	std::cout << "Greeting: " << greet("students") << std::endl;
-	std::cout << "Greeting: " << greet("James") << std::endl;
 	//-----------------------------------------------------------//
 
+	//-----------------------------------------------------------//
+
+	//store lambda function in a variable
+	//auto greet = greeter("Welcome");
+
+	////call the Lambda function
+	//std::cout << "Greeting: " << greet("students") << std::endl;
+	//std::cout << "Greeting: " << greet("James") << std::endl;
+	
 
 
+	//-----------------------------------------------------------//
+	// Pair Types:
+	
+	//Pairs_example();
+
+	//----------------------------------------------------------//
+	//back_insert_iterator_Example();
+	//front_insert_iterator_Example();
+	
+//	insert_iterator_Example();
+	
+
+	//----------------------------------------------------------//
+
+	//less_library_implementation();
+
+	Logical_operators();
+	
 	std::cin.get();
 
 }
